@@ -11,6 +11,8 @@
 #include "../include/udp_server_endpoint_impl.hpp"
 #include "../include/tcp_client_endpoint_impl.hpp"
 #include "../include/tcp_server_endpoint_impl.hpp"
+#include "../include/tls_client_endpoint_impl.hpp"
+#include "../include/tls_server_endpoint_impl.hpp"
 #include "../include/local_server_endpoint_impl.hpp"
 #include "../include/virtual_server_endpoint_impl.hpp"
 #include "../include/endpoint_definition.hpp"
@@ -230,18 +232,32 @@ std::shared_ptr<endpoint> endpoint_manager_impl::create_server_endpoint(
         boost::asio::ip::address its_unicast = configuration_->get_unicast_address();
         const std::string its_unicast_str = its_unicast.to_string();
         if (_start) {
+            VSOMEIP_TRACE << "endpoint_manager_impl::create_server_endpoint " 
+                    << (_reliable ? "[reliable]" : "[not reliable]");
             if (_reliable) {
-                its_endpoint = std::make_shared<tcp_server_endpoint_impl>(
-                        shared_from_this(),
-                        rm_->shared_from_this(),
-                        boost::asio::ip::tcp::endpoint(its_unicast, _port),
-                        io_,
-                        configuration_);
-                if (configuration_->has_enabled_magic_cookies(
-                        its_unicast_str, _port) ||
-                        configuration_->has_enabled_magic_cookies(
-                                "local", _port)) {
-                    its_endpoint->enable_magic_cookies();
+                const bool& using_tls_server = configuration_->is_server_over_tls();
+                VSOMEIP_TRACE << "endpoint_manager_impl::create_server_endpoint "
+                            << (using_tls_server ? "[tls]" : "[tcp]");
+                if (using_tls_server) {
+                    its_endpoint = std::make_shared<tls_server_endpoint_impl>(
+                            shared_from_this(),
+                            rm_->shared_from_this(),
+                            boost::asio::ip::tcp::endpoint(its_unicast, _port),
+                            io_,
+                            configuration_);
+                } else {
+                    its_endpoint = std::make_shared<tcp_server_endpoint_impl>(
+                            shared_from_this(),
+                            rm_->shared_from_this(),
+                            boost::asio::ip::tcp::endpoint(its_unicast, _port),
+                            io_,
+                            configuration_);
+                    if (configuration_->has_enabled_magic_cookies(
+                            its_unicast_str, _port) ||
+                            configuration_->has_enabled_magic_cookies(
+                                    "local", _port)) {
+                        its_endpoint->enable_magic_cookies();
+                    }
                 }
             } else {
                 its_endpoint = std::make_shared<udp_server_endpoint_impl>(
@@ -374,11 +390,20 @@ void endpoint_manager_impl::clear_client_endpoints(service_t _service, instance_
                 std::uint16_t its_port(0);
                 boost::asio::ip::address its_address;
                 if (_reliable) {
-                    std::shared_ptr<tcp_client_endpoint_impl> ep =
-                            std::dynamic_pointer_cast<tcp_client_endpoint_impl>(endpoint_to_delete);
-                    if (ep) {
-                        its_port = ep->get_remote_port();
-                        ep->get_remote_address(its_address);
+                    if (configuration_->is_client_over_tls()) {
+                        std::shared_ptr<tls_client_endpoint_impl> ep =
+                                std::dynamic_pointer_cast<tls_client_endpoint_impl>(endpoint_to_delete);
+                        if (ep) {
+                            its_port = ep->get_remote_port();
+                            ep->get_remote_address(its_address);
+                        }
+                    } else {
+                        std::shared_ptr<tcp_client_endpoint_impl> ep =
+                                std::dynamic_pointer_cast<tcp_client_endpoint_impl>(endpoint_to_delete);
+                        if (ep) {
+                            its_port = ep->get_remote_port();
+                            ep->get_remote_address(its_address);
+                        }
                     }
                 } else {
                     std::shared_ptr<udp_client_endpoint_impl> ep =
@@ -938,18 +963,33 @@ std::shared_ptr<endpoint> endpoint_manager_impl::create_client_endpoint(
     boost::asio::ip::address its_unicast = configuration_->get_unicast_address();
 
     try {
+        VSOMEIP_TRACE << "endpoint_manager_impl::create_client_endpoint " 
+                    << (_reliable ? "[reliable]" : "[not reliable]");
         if (_reliable) {
-            its_endpoint = std::make_shared<tcp_client_endpoint_impl>(
-                    shared_from_this(),
-                    rm_->shared_from_this(),
-                    boost::asio::ip::tcp::endpoint(its_unicast, _local_port),
-                    boost::asio::ip::tcp::endpoint(_address, _remote_port),
-                    io_,
-                    configuration_);
+            const bool& using_tls_client = configuration_->is_client_over_tls();
+            VSOMEIP_TRACE << "endpoint_manager_impl::create_client_endpoint "
+                          << (using_tls_client ? "[tls]" : "[tcp]");
+            if (using_tls_client) {
+                its_endpoint = std::make_shared<tls_client_endpoint_impl>(
+                        shared_from_this(),
+                        rm_->shared_from_this(),
+                        boost::asio::ip::tcp::endpoint(its_unicast, _local_port),
+                        boost::asio::ip::tcp::endpoint(_address, _remote_port),
+                        io_,
+                        configuration_);
+            } else {
+                its_endpoint = std::make_shared<tcp_client_endpoint_impl>(
+                        shared_from_this(),
+                        rm_->shared_from_this(),
+                        boost::asio::ip::tcp::endpoint(its_unicast, _local_port),
+                        boost::asio::ip::tcp::endpoint(_address, _remote_port),
+                        io_,
+                        configuration_);
 
-            if (configuration_->has_enabled_magic_cookies(_address.to_string(),
-                    _remote_port)) {
-                its_endpoint->enable_magic_cookies();
+                if (configuration_->has_enabled_magic_cookies(_address.to_string(),
+                        _remote_port)) {
+                    its_endpoint->enable_magic_cookies();
+                }
             }
         } else {
             its_endpoint = std::make_shared<udp_client_endpoint_impl>(

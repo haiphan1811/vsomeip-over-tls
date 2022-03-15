@@ -93,6 +93,7 @@ protected:
         CONNECTED,
         ESTABLISHED
     };
+    virtual bool is_open_connection() const { return false;}
     virtual void send_queued() = 0;
     virtual void get_configured_times_from_endpoint(
             service_t _service, method_t _method,
@@ -106,7 +107,10 @@ protected:
     bool check_queue_limit(const uint8_t *_data, std::uint32_t _size) const;
     void queue_train(bool _queue_size_zero_on_entry);
 
+    bool is_open_socket() const;
+
 protected:
+
     mutable std::mutex socket_mutex_;
     std::unique_ptr<socket_type> socket_;
     const endpoint_type remote_;

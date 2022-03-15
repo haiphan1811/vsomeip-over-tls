@@ -36,8 +36,10 @@ client_endpoint_impl<Protocol>::client_endpoint_impl(
         const std::shared_ptr<configuration>& _configuration)
         : endpoint_impl<Protocol>(_endpoint_host, _routing_host, _local, _io,
                 _max_message_size, _queue_limit, _configuration),
-          socket_(new socket_type(_io)), remote_(_remote),
-          flush_timer_(_io), connect_timer_(_io),
+          socket_(new socket_type(_io)),
+          remote_(_remote),
+          flush_timer_(_io),
+          connect_timer_(_io),
           connect_timeout_(VSOMEIP_DEFAULT_CONNECT_TIMEOUT), // TODO: use config variable
           state_(cei_state_e::CLOSED),
           reconnect_counter_(0),
@@ -73,7 +75,7 @@ void client_endpoint_impl<Protocol>::set_established(bool _established) {
     if (_established) {
         if (state_ != cei_state_e::CONNECTING) {
             std::lock_guard<std::mutex> its_lock(socket_mutex_);
-            if (socket_->is_open()) {
+            if (is_open_socket() || is_open_connection()) {
                 state_ = cei_state_e::ESTABLISHED;
             } else {
                 state_ = cei_state_e::CLOSED;
@@ -88,7 +90,7 @@ template<typename Protocol>
 void client_endpoint_impl<Protocol>::set_connected(bool _connected) {
     if (_connected) {
         std::lock_guard<std::mutex> its_lock(socket_mutex_);
-        if (socket_->is_open()) {
+        if (is_open_socket() || is_open_connection()) {
             state_ = cei_state_e::CONNECTED;
         } else {
             state_ = cei_state_e::CLOSED;
@@ -550,7 +552,7 @@ void client_endpoint_impl<Protocol>::shutdown_and_close_socket(bool _recreate_so
 template<typename Protocol>
 void client_endpoint_impl<Protocol>::shutdown_and_close_socket_unlocked(bool _recreate_socket) {
     local_port_ = 0;
-    if (socket_->is_open()) {
+    if (is_open_socket()) {
 #ifndef _WIN32
         if (-1 == fcntl(socket_->native_handle(), F_GETFD)) {
             VSOMEIP_ERROR << "cei::shutdown_and_close_socket_unlocked: socket/handle closed already '"
@@ -673,6 +675,14 @@ template<typename Protocol>
 size_t client_endpoint_impl<Protocol>::get_queue_size() const {
     std::lock_guard<std::mutex> its_lock(mutex_);
     return queue_size_;
+}
+
+template<typename Protocol>
+bool client_endpoint_impl<Protocol>::is_open_socket() const {
+    if (socket_) {
+        return socket_->is_open();
+    }
+    return false;
 }
 
 // Instantiate template

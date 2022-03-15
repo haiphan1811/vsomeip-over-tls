@@ -196,6 +196,16 @@ else()
 list(APPEND OS_LIBS ${SystemD_LIBRARIES})
 endif(NOT SystemD_FOUND OR ${CMAKE_SYSTEM_NAME} MATCHES "Android")
 
+# OpenSSL
+find_package(OpenSSL 1.1.0 REQUIRED)
+include_directories( ${OPENSSL_INCLUDE_DIR} )
+
+if(OpenSSL_FOUND)
+    MESSAGE( STATUS "OpenSSL " ${OPENSSL_VERSION} " found")
+else()
+    MESSAGE( STATUS "OpenSSL not found!")
+endif()
+
 # Multiple routing managers
 if (VSOMEIP_ENABLE_MULTIPLE_ROUTING_MANAGERS EQUAL 1)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVSOMEIP_ENABLE_MULTIPLE_ROUTING_MANAGERS")
@@ -290,7 +300,7 @@ target_include_directories(${VSOMEIP_NAME} INTERFACE
 # them (which shouldn't be required). ${Boost_LIBRARIES} includes absolute
 # build host paths as of writing, which also makes this important as it breaks
 # the build.
-target_link_libraries(${VSOMEIP_NAME} PRIVATE ${Boost_LIBRARIES} ${USE_RT} ${DL_LIBRARY} ${DLT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OS_LIBS})
+target_link_libraries(${VSOMEIP_NAME} PRIVATE ${Boost_LIBRARIES} ${USE_RT} ${DL_LIBRARY} ${DLT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OS_LIBS} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 
 ################################################################################
 # Service Discovery library

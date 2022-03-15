@@ -239,6 +239,11 @@ public:
     VSOMEIP_EXPORT uint32_t get_statistics_min_freq() const;
     VSOMEIP_EXPORT uint32_t get_statistics_max_messages() const;
 
+    VSOMEIP_EXPORT bool is_client_over_tls() const;
+    VSOMEIP_EXPORT bool is_server_over_tls() const;
+    VSOMEIP_EXPORT tls_credentials_t get_client_tls_credentials() const;
+    VSOMEIP_EXPORT tls_credentials_t get_server_tls_credentials() const;
+
 private:
     void read_data(const std::set<std::string> &_input,
             std::vector<configuration_element> &_elements,
@@ -379,6 +384,8 @@ private:
     void load_secure_services(const configuration_element &_element);
     void load_secure_service(const boost::property_tree::ptree &_tree);
 
+    void load_tls_credentials(const configuration_element &_element);
+
 private:
     std::mutex mutex_;
 
@@ -514,7 +521,10 @@ protected:
         ET_PLUGIN_TYPE,
         ET_ROUTING_CREDENTIALS,
         ET_SHUTDOWN_TIMEOUT,
-        ET_MAX = 42
+        ET_TLS_CREDENTIALS,
+        ET_TLS_CLIENT_ENABLE,
+        ET_TLS_SERVER_ENABLE,
+        ET_MAX = 45
     };
 
     bool is_configured_[ET_MAX];
@@ -568,6 +578,9 @@ protected:
     uint32_t statistics_interval_;
     uint32_t statistics_min_freq_;
     uint32_t statistics_max_messages_;
+
+    tls_credentials client_tls_credentials_;
+    tls_credentials server_tls_credentials_;
 };
 
 } // namespace cfg

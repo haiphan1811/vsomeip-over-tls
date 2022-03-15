@@ -35,6 +35,8 @@
 
 #include "../../security/include/policy.hpp"
 
+#include "tls_credentials.hpp"
+
 #define VSOMEIP_CONFIG_PLUGIN_VERSION              1
 
 namespace vsomeip_v3 {
@@ -273,6 +275,13 @@ public:
     virtual uint32_t get_statistics_interval() const = 0;
     virtual uint32_t get_statistics_min_freq() const = 0;
     virtual uint32_t get_statistics_max_messages() const = 0;
+
+    // TLS Credentials
+    virtual bool is_client_over_tls() const = 0;
+    virtual bool is_server_over_tls() const = 0;
+    typedef cfg::tls_credentials tls_credentials_t;
+    virtual tls_credentials_t get_client_tls_credentials() const = 0;
+    virtual tls_credentials_t get_server_tls_credentials() const = 0;
 };
 
 } // namespace vsomeip_v3

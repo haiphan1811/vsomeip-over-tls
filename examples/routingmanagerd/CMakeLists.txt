@@ -7,7 +7,7 @@ cmake_minimum_required (VERSION 2.8)
 
 # Daemon
 add_executable(routingmanagerd routingmanagerd.cpp)
-target_link_libraries(routingmanagerd ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY} ${DLT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(routingmanagerd ${VSOMEIP_NAME} ${Boost_LIBRARIES} ${DL_LIBRARY} ${DLT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_CRYPTO_LIBRARY})
 add_dependencies(routingmanagerd ${VSOMEIP_NAME})
 
 option(VSOMEIP_INSTALL_ROUTINGMANAGERD "Whether or not to install the routing manager daemon.")

@@ -124,7 +124,9 @@ configuration_impl::configuration_impl(const configuration_impl &_other)
       npdu_default_debounce_resp_(_other.npdu_default_debounce_resp_),
       npdu_default_max_retention_requ_(_other.npdu_default_max_retention_requ_),
       npdu_default_max_retention_resp_(_other.npdu_default_max_retention_resp_),
-      shutdown_timeout_(_other.shutdown_timeout_) {
+      shutdown_timeout_(_other.shutdown_timeout_),
+      client_tls_credentials_(_other.client_tls_credentials_),
+      server_tls_credentials_(_other.server_tls_credentials_) {
 
     applications_.insert(_other.applications_.begin(), _other.applications_.end());
     client_identifiers_ = _other.client_identifiers_;
@@ -510,6 +512,7 @@ bool configuration_impl::load_data(const std::vector<configuration_element> &_el
             load_debounce(e);
             load_acceptances(e);
             load_secure_services(e);
+            load_tls_credentials(e);
         }
     }
 
@@ -3634,6 +3637,60 @@ void configuration_impl::load_secure_service(const boost::property_tree::ptree &
     }
 }
 
+void configuration_impl::load_tls_credentials(const configuration_element &_element) {
+    try {
+        auto its_tls_credentials = _element.tree_.get_child("tls-credentials");
+        if (is_configured_[ET_TLS_CREDENTIALS]) {
+            VSOMEIP_WARNING << "Multiple definitions of tls-credentials."
+                    << " Ignoring definition from " << _element.name_;
+        } else {
+            is_configured_[ET_TLS_CREDENTIALS] = true;
+            for (auto i = its_tls_credentials.begin(); i != its_tls_credentials.end(); ++i) {
+                std::string its_key(i->first);
+                if (its_key == "client") {
+                    if (is_configured_[ET_TLS_CLIENT_ENABLE]) {
+                        VSOMEIP_WARNING << "Multiple definitions of tls-credentials.client."
+                        << " Ignoring definition from " << _element.name_;
+                    } else {
+                        for (auto j : i->second) {
+                            std::string its_sub_key(j.first);
+                            std::string its_sub_value(j.second.data());
+                            if (its_sub_key == "ca_chain_path") {
+                                client_tls_credentials_.root_ca_path_ = its_sub_value;
+                            } else if (its_sub_key == "certificate_path") {
+                                client_tls_credentials_.certificate_path_ = its_sub_value;
+                            } else if (its_sub_key == "private_path") {
+                                client_tls_credentials_.private_key_path_ = its_sub_value;
+                            }
+                        }
+                        is_configured_[ET_TLS_CLIENT_ENABLE] = true;
+                    }
+                } else if (its_key == "server") {
+                    if (is_configured_[ET_TLS_SERVER_ENABLE]) {
+                        VSOMEIP_WARNING << "Multiple definitions of tls-credentials.server."
+                        << " Ignoring definition from " << _element.name_;
+                    } else {
+                        for (auto j : i->second) {
+                            std::string its_sub_key(j.first);
+                            std::string its_sub_value(j.second.data());
+                            if (its_sub_key == "ca_chain_path") {
+                                server_tls_credentials_.root_ca_path_ = its_sub_value;
+                            } else if (its_sub_key == "certificate_path") {
+                                server_tls_credentials_.certificate_path_ = its_sub_value;
+                            } else if (its_sub_key == "private_path") {
+                                server_tls_credentials_.private_key_path_ = its_sub_value;
+                            }
+                        }
+                        is_configured_[ET_TLS_SERVER_ENABLE] = true;
+                    }
+                }
+            }
+        }
+    } catch (...) {
+        // Intentionally left empty
+    }
+}
+
 std::shared_ptr<debounce> configuration_impl::get_debounce(
         service_t _service, instance_t _instance, event_t _event) const {
     auto found_service = debounces_.find(_service);
@@ -4000,6 +4057,23 @@ uint32_t configuration_impl::get_statistics_min_freq() const {
 uint32_t configuration_impl::get_statistics_max_messages() const {
     return statistics_max_messages_;
 }
+
+bool configuration_impl::is_client_over_tls() const {
+    return is_configured_[ET_TLS_CLIENT_ENABLE];
+}
+
+bool configuration_impl::is_server_over_tls() const {
+    return is_configured_[ET_TLS_SERVER_ENABLE];
+}
+
+configuration_impl::tls_credentials_t configuration_impl::get_client_tls_credentials() const {
+    return client_tls_credentials_;
+}
+
+configuration_impl::tls_credentials_t configuration_impl::get_server_tls_credentials() const {
+    return server_tls_credentials_;
+}
+
 
 }  // namespace config
 }  // namespace vsomeip_v3
